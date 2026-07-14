@@ -280,6 +280,81 @@ export async function apiGetCourses(token: string): Promise<CourseFeeStructure[]
   }
 }
 
+export async function apiAddCourse(token: string, payload: Omit<CourseFeeStructure, 'id'>): Promise<CourseFeeStructure> {
+  try {
+    const res = await fetch('/api/courses', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await tryParseJson(res);
+    if (!res.ok) throw new Error(data.message || "Failed to add course");
+    return data;
+  } catch (err: any) {
+    if (err.message === "NOT_JSON" || err.message.includes("fetch") || err instanceof TypeError) {
+      const newC: CourseFeeStructure = {
+        ...payload,
+        id: "c_" + Date.now().toString(36)
+      };
+      const list = localDb.getCourses();
+      list.push(newC);
+      localDb.setCourses(list);
+      return newC;
+    }
+    throw err;
+  }
+}
+
+export async function apiEditCourse(token: string, id: string, payload: Partial<CourseFeeStructure>): Promise<CourseFeeStructure> {
+  try {
+    const res = await fetch(`/api/courses/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await tryParseJson(res);
+    if (!res.ok) throw new Error(data.message || "Failed to update course");
+    return data;
+  } catch (err: any) {
+    if (err.message === "NOT_JSON" || err.message.includes("fetch") || err instanceof TypeError) {
+      const list = localDb.getCourses();
+      const idx = list.findIndex(c => c.id === id);
+      if (idx === -1) throw new Error("Course not found locally");
+
+      const updated = { ...list[idx], ...payload, id };
+      list[idx] = updated;
+      localDb.setCourses(list);
+      return updated;
+    }
+    throw err;
+  }
+}
+
+export async function apiDeleteCourse(token: string, id: string): Promise<void> {
+  try {
+    const res = await fetch(`/api/courses/${id}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await tryParseJson(res);
+    if (!res.ok) throw new Error(data.message || "Failed to delete course");
+  } catch (err: any) {
+    if (err.message === "NOT_JSON" || err.message.includes("fetch") || err instanceof TypeError) {
+      let list = localDb.getCourses();
+      list = list.filter(c => c.id !== id);
+      localDb.setCourses(list);
+      return;
+    }
+    throw err;
+  }
+}
+
 export async function apiGetFeeRecords(token: string, user: User): Promise<FeeRecord[]> {
   try {
     const res = await fetch('/api/fee-records', {

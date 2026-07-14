@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Landmark, Users, CreditCard, AlertCircle, FileText, LogOut, User as UserIcon, Shield, Menu, X, HelpCircle, MapPin } from 'lucide-react';
+import { Landmark, Users, CreditCard, AlertCircle, FileText, LogOut, User as UserIcon, Shield, Menu, X, HelpCircle, MapPin, BookOpen } from 'lucide-react';
 import { User, Student, CourseFeeStructure, FeeRecord, Payment, DashboardStats, Branch } from './types';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -8,6 +8,7 @@ import FeeBilling from './components/FeeBilling';
 import PendingPayments from './components/PendingPayments';
 import Reports from './components/Reports';
 import ReceiptModal from './components/ReceiptModal';
+import CourseList from './components/CourseList';
 import {
   apiGetMe,
   apiGetStudents,
@@ -15,6 +16,9 @@ import {
   apiEditStudent,
   apiDeleteStudent,
   apiGetCourses,
+  apiAddCourse,
+  apiEditCourse,
+  apiDeleteCourse,
   apiGetFeeRecords,
   apiGenerateFee,
   apiGenerateBulkFees,
@@ -196,6 +200,36 @@ export default function App() {
     }
   };
 
+  const handleAddCourse = async (coursePayload: Omit<CourseFeeStructure, 'id'>) => {
+    try {
+      if (!token) return;
+      await apiAddCourse(token, coursePayload);
+      await fetchSystemData();
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
+  const handleEditCourse = async (id: string, updatePayload: Partial<CourseFeeStructure>) => {
+    try {
+      if (!token) return;
+      await apiEditCourse(token, id, updatePayload);
+      await fetchSystemData();
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
+  const handleDeleteCourse = async (id: string) => {
+    try {
+      if (!token) return;
+      await apiDeleteCourse(token, id);
+      await fetchSystemData();
+    } catch (err: any) {
+      throw err;
+    }
+  };
+
   if (authLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -215,6 +249,7 @@ export default function App() {
   const navigationItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Landmark },
     { id: 'students', label: 'Students Directory', icon: Users },
+    { id: 'courses', label: 'Course Management', icon: BookOpen },
     { id: 'billing', label: 'Fee Collections', icon: CreditCard },
     { id: 'pending', label: 'Reminders outreach', icon: AlertCircle },
     { id: 'reports', label: 'Financial Reports', icon: FileText },
@@ -339,6 +374,16 @@ export default function App() {
               onAddStudent={handleAddStudent}
               onEditStudent={handleEditStudent}
               onDeleteStudent={handleDeleteStudent}
+            />
+          )}
+
+          {activeTab === 'courses' && (
+            <CourseList
+              courses={courses}
+              user={user}
+              onAddCourse={handleAddCourse}
+              onEditCourse={handleEditCourse}
+              onDeleteCourse={handleDeleteCourse}
             />
           )}
 

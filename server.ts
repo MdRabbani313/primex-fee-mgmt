@@ -296,6 +296,23 @@ app.put("/api/courses/:id", authenticateToken, (req: any, res) => {
   res.json(db.courses[index]);
 });
 
+app.delete("/api/courses/:id", authenticateToken, (req: any, res) => {
+  if (req.user.role !== "ADMIN") {
+    return res.status(403).json({ message: "Only ADMIN can delete courses" });
+  }
+
+  const id = req.params.id;
+  const index = db.courses.findIndex(c => c.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: "Course not found" });
+  }
+
+  db.courses.splice(index, 1);
+  saveDB();
+  res.json({ message: "Course deleted successfully" });
+});
+
 // Fee Records API
 app.get("/api/fee-records", authenticateToken, (req: any, res) => {
   const user = req.user;
