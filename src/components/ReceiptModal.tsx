@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { X, Printer, Share2, Mail, Phone, Landmark, Check, AlertCircle } from 'lucide-react';
 import { Student, Payment, FeeRecord } from '../types';
+import { apiGetReceipt } from '../api';
 
 interface ReceiptModalProps {
   receiptNo: string | null;
@@ -25,18 +26,8 @@ export default function ReceiptModal({ receiptNo, onClose }: ReceiptModalProps) 
       setLoading(true);
       setError(null);
       try {
-        const token = localStorage.getItem('primex_token');
-        const response = await fetch(`/api/payments/receipt/${receiptNo}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        
-        if (!response.ok) {
-          throw new Error('Could not retrieve receipt details.');
-        }
-
-        const data = await response.json();
+        const token = localStorage.getItem('primex_token') || '';
+        const data = await apiGetReceipt(token, receiptNo);
         setDetails(data);
       } catch (err: any) {
         setError(err.message || 'Failed to load receipt.');

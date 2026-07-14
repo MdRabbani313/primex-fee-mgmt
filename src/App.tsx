@@ -8,6 +8,20 @@ import FeeBilling from './components/FeeBilling';
 import PendingPayments from './components/PendingPayments';
 import Reports from './components/Reports';
 import ReceiptModal from './components/ReceiptModal';
+import {
+  apiGetMe,
+  apiGetStudents,
+  apiAddStudent,
+  apiEditStudent,
+  apiDeleteStudent,
+  apiGetCourses,
+  apiGetFeeRecords,
+  apiGenerateFee,
+  apiGenerateBulkFees,
+  apiGetPayments,
+  apiRecordPayment,
+  apiGetReportsSummary
+} from './api';
 
 export default function App() {
   // Authentication State
@@ -38,14 +52,8 @@ export default function App() {
       }
 
       try {
-        const response = await fetch('/api/auth/me', {
-          headers: {
-            'Authorization': `Bearer ${storedToken}`
-          }
-        });
-        const data = await response.json();
-
-        if (response.ok && data.user) {
+        const data = await apiGetMe(storedToken);
+        if (data.user) {
           setToken(storedToken);
           setUser(data.user);
         } else {
@@ -65,26 +73,16 @@ export default function App() {
 
   // 2. Fetch full system data upon successful login
   const fetchSystemData = async () => {
-    if (!token) return;
+    if (!token || !user) return;
     setDataLoading(true);
     try {
-      const headers = { 'Authorization': `Bearer ${token}` };
-
       // Parallelize fetches to keep execution extremely fast and snappy!
-      const [studentsRes, coursesRes, feeRecordsRes, paymentsRes, statsRes] = await Promise.all([
-        fetch('/api/students', { headers }),
-        fetch('/api/courses', { headers }),
-        fetch('/api/fee-records', { headers }),
-        fetch('/api/payments', { headers }),
-        fetch('/api/reports/summary', { headers })
-      ]);
-
       const [studentsData, coursesData, feeRecordsData, paymentsData, statsData] = await Promise.all([
-        studentsRes.json(),
-        coursesRes.json(),
-        feeRecordsRes.json(),
-        paymentsRes.json(),
-        statsRes.json()
+        apiGetStudents(token, user),
+        apiGetCourses(token),
+        apiGetFeeRecords(token, user),
+        apiGetPayments(token, user),
+        apiGetReportsSummary(token, user)
       ]);
 
       setStudents(studentsData);
@@ -126,19 +124,8 @@ export default function App() {
   // 3. API state-modifying handlers to flow back to database
   const handleAddStudent = async (studentPayload: Omit<Student, 'id'>) => {
     try {
-      const response = await fetch('/api/students', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(studentPayload)
-      });
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.message || 'Could not register student.');
-      }
-      // Refresh
+      if (!token || !user) return;
+      await apiAddStudent(token, studentPayload, user);
       await fetchSystemData();
     } catch (err: any) {
       throw err;
@@ -147,18 +134,8 @@ export default function App() {
 
   const handleEditStudent = async (id: string, updatePayload: Partial<Student>) => {
     try {
-      const response = await fetch(`/api/students/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(updatePayload)
-      });
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.message || 'Could not update student.');
-      }
+      if (!token || !user) return;
+      await apiEditStudent(token, id, updatePayload, user);
       await fetchSystemData();
     } catch (err: any) {
       throw err;
@@ -167,16 +144,8 @@ export default function App() {
 
   const handleDeleteStudent = async (id: string) => {
     try {
-      const response = await fetch(`/api/students/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.message || 'Could not remove student.');
-      }
+      if (!token || !user) return;
+      await apiDeleteStudent(token, id, user);
       await fetchSystemData();
     } catch (err: any) {
       throw err;
@@ -185,18 +154,8 @@ export default function App() {
 
   const handleGenerateFee = async (feePayload: Omit<FeeRecord, 'id' | 'paidAmount' | 'status' | 'createdAt'>) => {
     try {
-      const response = await fetch('/api/fee-records', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(feePayload)
-      });
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.message || 'Could not generate student bill.');
-      }
+      if (!token || !user) return;
+      await apiGenerateFee(token, feePayload, user);
       await fetchSystemData();
     } catch (err: any) {
       throw err;
@@ -212,20 +171,10 @@ export default function App() {
     dueDate: string;
   }) => {
     try {
-      const response = await fetch('/api/fee-records/bulk', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(bulkPayload)
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Could not trigger bulk billing.');
-      }
+      if (!token || !user) return;
+      const message = await apiGenerateBulkFees(token, bulkPayload, user);
       await fetchSystemData();
-      return data.message;
+      return message;
     } catch (err: any) {
       throw err;
     }
@@ -238,18 +187,8 @@ export default function App() {
     notes?: string;
   }) => {
     try {
-      const response = await fetch('/api/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(paymentPayload)
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Could not register payment.');
-      }
+      if (!token || !user) return;
+      const data = await apiRecordPayment(token, paymentPayload, user);
       await fetchSystemData();
       return data; // Returns payment + updated feeRecord
     } catch (err: any) {

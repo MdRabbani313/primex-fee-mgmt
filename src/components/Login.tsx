@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ShieldCheck, User as UserIcon, Lock, Landmark, AlertCircle, Loader2 } from 'lucide-react';
 import { User } from '../types';
+import { apiLogin } from '../api';
 
 interface LoginProps {
   onLoginSuccess: (token: string, user: User) => void;
@@ -23,18 +24,7 @@ export default function Login({ onLoginSuccess }: LoginProps) {
     setError(null);
 
     try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Invalid login credentials');
-      }
-
+      const data = await apiLogin(username, password);
       onLoginSuccess(data.token, data.user);
     } catch (err: any) {
       setError(err.message || 'Server error. Please try again.');
