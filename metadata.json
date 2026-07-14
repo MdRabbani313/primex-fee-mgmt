@@ -1,0 +1,6 @@
+{
+  "name": "Primex Fee Management",
+  "description": "A comprehensive fee management system for Primex, featuring role-based access for Admin, Urga, and Niharika branches, student profiling, bulk fee generation, transaction logging, PDF receipt downloads, WhatsApp reminders, and detailed reports.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
